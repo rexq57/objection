@@ -112,10 +112,12 @@ def ivars(args: list) -> None:
     ivar_results = api.ios_heap_print_ivars(target_pointer, _should_print_as_utf8(args))
 
     click.secho(tabulate(
-        [[
-            key, value
-        ] for key, value in ivar_results[1].items()], headers=['iVar', 'Value'],
+        [
+            [key, f"({type(value).__name__}): {value}"]  # 获取类型名并格式化输出
+            for key, value in ivar_results[1].items()
+        ], headers=['iVar', 'Value'],
     ))
+
 
 
 def methods(args: list) -> None:
