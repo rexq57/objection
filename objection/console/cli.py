@@ -27,7 +27,8 @@ def get_agent() -> Agent:
         foremost=state_connection.foremost,
         debugger=state_connection.debugger,
         pause=not state_connection.no_pause,
-        uid=state_connection.uid
+        uid=state_connection.uid,
+        pid=state_connection.pid
     ))
 
     agent.run()
@@ -53,9 +54,12 @@ def get_agent() -> Agent:
 @click.option('--foremost', '-f', required=False, is_flag=True, help='Use the current foremost application.')
 @click.option('--debugger', required=False, default=False, is_flag=True, help='Enable the Chrome debug port.')
 @click.option('--uid', required=False, default=None, help='Specify the uid to run as (Android only).')
+@click.option('--pid', '-p', required=False, default='pid',
+              help='pid to connect to.', show_default=True)
+
 def cli(network: bool, host: str, port: int, api_host: str, api_port: int,
         name: str, serial: str, debug: bool, spawn: bool, no_pause: bool, 
-        foremost: bool, debugger: bool, uid: int) -> None:
+        foremost: bool, debugger: bool, uid: int, pid: int) -> None:
     """
         \b
              _   _         _   _
@@ -78,6 +82,9 @@ def cli(network: bool, host: str, port: int, api_host: str, api_port: int,
 
     if serial:
         state_connection.device_id = serial
+
+    # set gadget name
+    state_connection.pid = int(pid)
 
     # set api parameters
     app_state.api_host = api_host

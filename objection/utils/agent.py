@@ -30,6 +30,7 @@ class AgentConfig(object):
     pause: bool = True
     debugger: bool = False
     uid: int = None
+    pid: int = None
 
 
 class OutputHandlers(object):
@@ -197,6 +198,10 @@ class Agent(object):
 
             :return:
         """
+        if self.config.pid:
+            self.pid = self.config.pid
+            state_connection.name = str(self.config.pid)
+            return
 
         if (self.config.name is None) and (not self.config.foremost):
             raise Exception('Need a target name to spawn/attach to')

@@ -22,6 +22,7 @@ class StateConnection(object):
         self.agent = None
         self.api = None
         self.uid = None
+        self.pid = None
 
     def use_usb(self) -> None:
         """
