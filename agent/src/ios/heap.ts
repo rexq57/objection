@@ -3,7 +3,6 @@ import { bytesToUTF8 } from "./lib/helpers";
 import { IHeapObject } from "./lib/interfaces";
 
 export namespace heap {
-
   const enumerateInstances = (clazz: string): ObjC.Object[] => {
     if (!ObjC.classes.hasOwnProperty(clazz)) {
       c.log(`Unknown Objective-C class: ${c.redBright(clazz)}`);
@@ -12,14 +11,18 @@ export namespace heap {
 
     const specifier: ObjC.DetailedChooseSpecifier = {
       class: ObjC.classes[clazz],
-      subclasses: true,  // don't skip subclasses
+      subclasses: true, // don't skip subclasses
     };
 
     return ObjC.chooseSync(specifier);
   };
 
   export const getInstances = (clazz: string): IHeapObject[] => {
-    c.log(`${c.blackBright(`Enumerating live instances of`)} ${c.greenBright(clazz)}...`);
+    c.log(
+      `${c.blackBright(`Enumerating live instances of`)} ${c.greenBright(
+        clazz
+      )}...`
+    );
 
     return enumerateInstances(clazz).map((instance): IHeapObject => {
       try {
@@ -39,32 +42,63 @@ export namespace heap {
 
   const resolvePointer = (pointer: string): ObjC.Object => {
     const o = new ObjC.Object(new NativePointer(pointer));
-    c.log(`${c.blackBright(`Pointer ` + pointer + ` is to class `)}${c.greenBright(o.$className)}`);
+    c.log(
+      `${c.blackBright(`Pointer ` + pointer + ` is to class `)}${c.greenBright(
+        o.$className
+      )}`
+    );
 
     return o;
   };
 
-  export const getIvars = (pointer: string, toUTF8: boolean): [string, any[string]] => {
+  export const getIvars = (
+    pointer: string,
+    toUTF8: boolean
+  ): [string, { [name: string]: any }] => {
     const { $className, $ivars } = resolvePointer(pointer);
 
-    // if we need to get utf8 representations, start a new object with
-    // which cloned properties will have utf8 values. we _could_ have
-    // just gone and replaces values in $ivars, but there are some
-    // access errors for that.
-    if (toUTF8) {
-      const $clonedIvars = {};
-      c.log(c.blackBright(`Converting ivar values to UTF8 strings...`));
-      for (const k in $ivars) {
-        if ($ivars.hasOwnProperty(k)) {
-          const v = $ivars[k];
-          $clonedIvars[k] = bytesToUTF8(v);
-        }
+    const formatValue = (value: any): any => {
+      // 判断是否是 ObjC 对象
+      if (value instanceof ObjC.Object) {
+        return {
+          className: value.$className,
+          pointer: value.handle,
+          value: new ObjC.Object(new NativePointer(value.handle)).toString(),
+        };
       }
 
-      return [$className, $clonedIvars];
+      // 判断是否是 NativePointer
+      if (value instanceof NativePointer) {
+        return { type: "NativePointer", address: value.toString() };
+      }
+
+      // 判断是否是基础类型
+      if (
+        typeof value === "string" ||
+        typeof value === "number" ||
+        typeof value === "boolean"
+      ) {
+        return value;
+      }
+
+      // 默认返回类型和值
+      return value;
+    };
+
+    // 转换 ivars
+    const convertedIvars: { [name: string]: any } = {};
+    c.log(c.blackBright(`Converting ivars...`));
+
+    for (const k in $ivars) {
+      if ($ivars.hasOwnProperty(k)) {
+        const rawValue = $ivars[k];
+        convertedIvars[k] = formatValue(
+          toUTF8 ? bytesToUTF8(rawValue) : rawValue
+        );
+      }
     }
 
-    return [$className, $ivars];
+    return [$className, convertedIvars];
   };
 
   export const getMethods = (pointer: string): [string, any[string]] => {
@@ -72,11 +106,19 @@ export namespace heap {
     return [$className, $ownMethods];
   };
 
-  export const callInstanceMethod = (pointer: string, method: string, returnString: boolean): void => {
+  export const callInstanceMethod = (
+    pointer: string,
+    method: string,
+    returnString: boolean
+  ): void => {
     const i = resolvePointer(pointer);
-    c.log(`${c.blackBright(`Executing:`)} ${c.greenBright(`[${i.$className} ${method}]`)}`);
+    c.log(
+      `${c.blackBright(`Executing:`)} ${c.greenBright(
+        `[${i.$className} ${method}]`
+      )}`
+    );
 
-    const result =  i[method]();
+    const result = i[method]();
 
     if (returnString) {
       return result.toString();

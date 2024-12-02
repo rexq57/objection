@@ -1,4 +1,5 @@
 import pprint
+from typing import Any
 
 import click
 from prompt_toolkit import prompt
@@ -111,11 +112,34 @@ def ivars(args: list) -> None:
     api = state_connection.get_api()
     ivar_results = api.ios_heap_print_ivars(target_pointer, _should_print_as_utf8(args))
 
+    def format_class_and_value(value: Any) -> tuple:
+        """Format value with quotes for strings and prepare className:pointer."""
+        if isinstance(value, dict) and 'className' in value and 'pointer' in value:
+            class_and_pointer = f"<{value['className']}:{value['pointer']}>"
+            raw_value = value.get('value', '')
+        else:
+            class_and_pointer = ''
+            raw_value = value
+
+        # If the value is a string, wrap it in quotes and escape special characters
+        if isinstance(raw_value, str):
+            formatted_value = repr(raw_value)
+        else:
+            formatted_value = raw_value
+
+        return formatted_value, class_and_pointer
+
+    # Prepare table data with iVar, Value, and className:Pointer
+    table_data = [
+        [key, class_and_pointer, formatted_value]
+        for key, raw_value in ivar_results[1].items()
+        for formatted_value, class_and_pointer in [format_class_and_value(raw_value)]
+    ]
+
+    # Display the table with swapped columns
     click.secho(tabulate(
-        [
-            [key, f"({type(value).__name__}): {value}"]  # 获取类型名并格式化输出
-            for key, value in ivar_results[1].items()
-        ], headers=['iVar', 'Value'],
+        table_data,
+        headers=['iVar', '<className:pointer>', 'Value'],
     ))
 
 
