@@ -131,7 +131,7 @@ def ivars(args: list) -> None:
 
     # Prepare table data with iVar, Value, and className:Pointer
     table_data = [
-        [key, class_and_pointer, formatted_value]
+        [key, formatted_value, class_and_pointer]
         for key, raw_value in ivar_results[1].items()
         for formatted_value, class_and_pointer in [format_class_and_value(raw_value)]
     ]
@@ -139,7 +139,7 @@ def ivars(args: list) -> None:
     # Display the table with swapped columns
     click.secho(tabulate(
         table_data,
-        headers=['iVar', '<className:pointer>', 'Value'],
+        headers=['iVar', 'Value', '<className:pointer>'],
     ))
 
 
